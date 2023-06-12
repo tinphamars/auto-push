@@ -2,14 +2,16 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import io from "socket.io-client";
+import io, { Socket } from "socket.io-client";
 import Users from "./component/users";
 
 export default function Home() {
   const [socket, setSocket] = useState(null);
 
   const setupSocket = () => {
-    const newSocket: any = io("http://localhost:7777");
+    const newSocket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
+      "ws://localhost:7777"
+    );
     newSocket.on("connect", () => {
       console.log("success", "Socket Connected!");
     });
@@ -21,9 +23,8 @@ export default function Home() {
   }, []);
 
   const handleFocusInputChat = () => {
-    // Connect to the Socket.io server
     console.log("on focus input", socket);
-    // socket.emit("typing_123", "typing");
+    socket && socket.emit("typing", "typing");
   };
 
   return (
