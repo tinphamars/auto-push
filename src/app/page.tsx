@@ -1,127 +1,72 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useState } from "react";
-import io, { Socket } from "socket.io-client";
-import Users from "./component/users";
+import React, { useState } from "react";
+import { userLogin } from "./api/login";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [socket, setSocket] = useState(null);
-
-  const setupSocket = () => {
-    const newSocket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-      "ws://localhost:7777"
-    );
-    newSocket.on("connect", () => {
-      console.log("success", "Socket Connected!");
-    });
-    setSocket(newSocket);
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const route = useRouter();
+  const handleSubmitLoginFrom = (e: React.FormEvent<HTMLFormElement>): void => {
+    e.preventDefault();
+    if (email && password) {
+      userLogin({ email, password })
+        .then((user) => {
+          if (user) {
+            localStorage.setItem("user", JSON.stringify(user));
+            route.push("/chat");
+          }
+        })
+        .catch((err) => console.log(err));
+    }
   };
 
-  useEffect(() => {
-    setupSocket();
-  }, []);
+  const handleSetEmail = (e: any) => {
+    setEmail(e.target.value);
+  };
 
-  const handleFocusInputChat = () => {
-    console.log("on focus input", socket);
-    socket && socket.emit("typing", "typing");
+  const handleSetPassword = (e: any) => {
+    setPassword(e.target.value);
   };
 
   return (
     <main className="container">
-      <div className="p-3 shadow-sm rounded-3 mb-3 bg-dark text-center">
-        <h3 className="text-white">I - Group</h3>
-      </div>
-      <div className="row">
-        <div className="col-12 col-md-4">
-          <Users />
-        </div>
-        <div className="col-12 col-md-8">
-          <div className="bg-main h-100 rounded-3 mb-2">
-            <div className="d-flex p-3 your-message">
-              <div className="friend-avatar mr-15">
-                <Image
-                  src="/image/user-4.png"
-                  alt="friend name"
-                  width={30}
-                  height={30}
-                />
-              </div>
-              <div className="text-white">
-                <div className="mt-1">
-                  <span className="d-inline-block p-2 rounded-2 bg-gray-1">
-                    hi
-                  </span>
-                </div>
-                <div className="mt-1">
-                  <span className="d-inline-block p-2 rounded-2 bg-gray-1">
-                    what is your name
-                  </span>
-                </div>
-                <div className="mt-1">
-                  <span className="message-text bg-gray-1 p-2 rounded-2 ">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                    Adipisci, alias praesentium! Perferendis, sit eum quod rem
-                    cum omnis quos placeat voluptas consequuntur molestias.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="d-flex p-3 flex-row-reverse">
-              <div className="friend-avatar ml-15">
-                <Image
-                  src="/image/user-2.png"
-                  alt="friend name"
-                  width={30}
-                  height={30}
-                />
-              </div>
-              <div className="text-white">
-                <div className="mt-1 text-end">
-                  <span className="message-text bg-gray p-2 rounded-2 ">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                    Adipisci, alias praesentium! Perferendis, sit eum quod rem
-                    cum omnis quos placeat voluptas consequuntur molestias.
-                  </span>
-                </div>
-                <div className="mt-1 text-end">
-                  <span className="message-text bg-gray p-2 rounded-2 ">
-                    What is your name
-                  </span>
-                </div>
-                <div className="mt-1 text-end">
-                  <span className="message-text bg-gray p-2 rounded-2 ">
-                    what is your name
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray rounded-5 p-2 d-flex justify-content-between align-items-center mx-2">
-              <button className="btn">
-                <Image
-                  src="/image/file.png"
-                  alt="friend name"
-                  width={23}
-                  height={23}
-                />
-              </button>
+      <div className="main-login">
+        <div className="rounded-3 bg-white p-3 form-login">
+          <form action="" onSubmit={handleSubmitLoginFrom}>
+            <div className="mb-3">
+              <label htmlFor="exampleInputText_email" className="form-label">
+                Email
+              </label>
               <input
-                type="text"
-                className="w-100 message-input"
-                onFocus={handleFocusInputChat}
+                type="email"
+                value={email}
+                onChange={handleSetEmail}
+                className="form-control"
+                id="exampleInputText_email"
+                autoComplete="username"
               />
-              <button type="button" className="btn">
-                <Image
-                  src="/image/send.png"
-                  alt="friend name"
-                  width={23}
-                  height={23}
-                />
+            </div>
+            <div className="mb-3">
+              <label htmlFor="exampleInputText_password" className="form-label">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={handleSetPassword}
+                className="form-control"
+                id="exampleInputText_password"
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="text-center">
+              <button type="submit" className="btn w-25 btn-outline-warning">
+                Login
               </button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </main>
