@@ -5,14 +5,15 @@ import io from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "react-query";
 
-import Users from "../component/users";
-import Messages from "../component/messages";
-import { getFriendList } from "../api/login";
+import Users from "../../component/users";
+import Messages from "../../component/messages";
+import { getFriendList } from "../../api/login";
 import { useRouter } from "next/navigation";
 
 interface Message {
-  userId: number;
+  userId: string;
   value: string;
+  roomId: string;
 }
 
 // Message type
@@ -21,11 +22,12 @@ interface MessageShow {
   value: string;
 }
 
-export default function Chat() {
+export default function Room({ params }: { params: { id: string } }) {
   const [socket, setSocket] = useState<any>(null);
   const [message, setMessage] = useState<Message>({
-    userId: 10,
+    userId: "",
     value: "",
+    roomId: "",
   });
 
   const route = useRouter();
@@ -35,7 +37,9 @@ export default function Chat() {
   const [fromServer, setFromServer] = useState<MessageShow[]>([]);
 
   const setupSocket = () => {
-    const newSocket: any = io("http://localhost:7171");
+    const newSocket: any = io("http://localhost:7171", {
+      withCredentials: true,
+    });
     newSocket.on("connect", () => {
       setSocket(newSocket);
     });
@@ -43,6 +47,7 @@ export default function Chat() {
 
   useEffect(() => {
     setupSocket();
+    // Set User
     const getUser = localStorage.getItem("user") || null;
 
     if (getUser) {
@@ -50,6 +55,9 @@ export default function Chat() {
     } else {
       route.push("/");
     }
+    // End Set User
+
+    setMessage({ ...message, roomId: params.id });
 
     return () => {
       socket && socket.disconnect();
@@ -63,10 +71,19 @@ export default function Chat() {
         setNewMes(data);
       });
 
+    socket &&
+      socket.emit("joinRoom", params.id, (error: any) => {
+        if (error) {
+          console.error(error);
+        } else {
+          console.log("Joined room successfully");
+        }
+      });
+
     return () => {
       socket && socket.disconnect();
     };
-  }, [socket]);
+  }, [socket, params]);
 
   const handleFocusInputChat = () => {
     socket && socket.emit("typing", "typing");
@@ -111,50 +128,6 @@ export default function Chat() {
     <main className="container-sm">
       <div className="row">
         <div className="col-12 col-md-4 user-list">
-          {user && (
-            <div className="mb-2 text-center p-2 shadow-sm bg-white rounded-3">
-              <Image
-                alt="User profile image"
-                width={100}
-                height={100}
-                src={user.avatar}
-                className="rounded-circle"
-              />
-              <div className="mt-2 size-16 fw-semibold text-danger">
-                <span className="text-capitalize">{user.name}</span>
-              </div>
-            </div>
-          )}
-
-          {/* <div className="my-2 bg-gray-1 rounded-3 shadow-sm">
-            <input
-              type="text"
-              className="form-control border-0"
-              placeholder="Find friend  ..."
-            />
-            <Image
-              alt="User profile image"
-              width={16}
-              height={16}
-              src="/image/remove.png"
-            />
-          </div> */}
-          <div className="mb-3 position-relative">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Where is your friend"
-            />
-            <button className="btn-in-input" type="button">
-              <Image
-                alt="User profile image"
-                width={16}
-                height={16}
-                src="/image/remove.png"
-              />
-            </button>
-          </div>
-
           {friendList && friendList.status === "success" && friendList.data && (
             <Users user={friendList.data} />
           )}
