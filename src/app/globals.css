@@ -112,6 +112,14 @@ body {
   right: 4px;
 }
 
+.friend-list .list-group-item:hover {
+  background: #7A8194;
+} 
+
+.friend-list .list-group-item {
+  cursor: pointer;
+} 
+
 @media only screen and (max-width: 767px) {
   .user-list {
     margin-bottom: 1rem;

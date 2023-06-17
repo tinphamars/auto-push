@@ -40,6 +40,7 @@ export default function Room({ params }: { params: { id: string } }) {
     const newSocket: any = io("http://localhost:7171", {
       withCredentials: true,
     });
+
     newSocket.on("connect", () => {
       setSocket(newSocket);
     });

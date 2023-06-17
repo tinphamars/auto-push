@@ -27,4 +27,11 @@ export const register = async (body : {}) => {
   }
 };
   
-  
+export const getConversation = async () => {
+  try {
+    const result = await instance.get("/conversations");
+    return result.data.data;
+  } catch (error) {
+    console.log(error);
+  }
+};

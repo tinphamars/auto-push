@@ -7,12 +7,13 @@ import { useQuery } from "react-query";
 
 import Users from "../component/users";
 import Messages from "../component/messages";
-import { getFriendList } from "../api/login";
+import { getConversation, getFriendList } from "../api/login";
 import { useRouter } from "next/navigation";
 
 interface Message {
-  userId: number;
+  userId: string;
   value: string;
+  roomId: string | null;
 }
 
 // Message type
@@ -22,20 +23,24 @@ interface MessageShow {
 }
 
 export default function Chat() {
+  const route = useRouter();
   const [socket, setSocket] = useState<any>(null);
   const [message, setMessage] = useState<Message>({
-    userId: 10,
+    userId: "",
     value: "",
+    roomId: "",
   });
-
-  const route = useRouter();
-
   const [user, setUser] = useState<any>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
   const [newMes, setNewMes] = useState<MessageShow | null>(null);
   const [fromServer, setFromServer] = useState<MessageShow[]>([]);
 
   const setupSocket = () => {
-    const newSocket: any = io("http://localhost:7171");
+    const newSocket: any = io("http://localhost:7171", {
+      withCredentials: true,
+      autoConnect: true,
+    });
+
     newSocket.on("connect", () => {
       setSocket(newSocket);
     });
@@ -51,29 +56,29 @@ export default function Chat() {
       route.push("/");
     }
 
-    return () => {
-      socket && socket.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
     socket &&
       socket.on("message", (data: MessageShow) => {
         setFromServer((old) => [...old, data]);
         setNewMes(data);
+        console.log("client data",data);
       });
 
     return () => {
       socket && socket.disconnect();
     };
-  }, [socket]);
+  }, []);
 
   const handleFocusInputChat = () => {
     socket && socket.emit("typing", "typing");
   };
 
   const handleChangeInputChat = (e: any) => {
-    setMessage({ ...message, value: e.target.value, userId: user._id });
+    setMessage({
+      ...message,
+      value: e.target.value,
+      userId: user._id,
+      roomId: roomId,
+    });
   };
 
   const handleSubmitMessage = (e: any) => {
@@ -87,8 +92,13 @@ export default function Chat() {
   // Get All Friend List
   const friendList = useQuery({
     queryKey: ["friends"],
-    queryFn: () => getFriendList({}),
+    queryFn: () => getConversation(),
   });
+
+  // HANDLE set id room
+  const handleSetIdRoom = (id: string) => {
+    setRoomId(id);
+  };
 
   // Scroll to end of list message
   const endRef = useRef<HTMLElement>(null);
@@ -104,7 +114,6 @@ export default function Chat() {
       handelScroll();
     }
   }, [newMes, user]);
-
   // End scroll to end of list message
 
   return (
@@ -126,19 +135,6 @@ export default function Chat() {
             </div>
           )}
 
-          {/* <div className="my-2 bg-gray-1 rounded-3 shadow-sm">
-            <input
-              type="text"
-              className="form-control border-0"
-              placeholder="Find friend  ..."
-            />
-            <Image
-              alt="User profile image"
-              width={16}
-              height={16}
-              src="/image/remove.png"
-            />
-          </div> */}
           <div className="mb-3 position-relative">
             <input
               type="text"
@@ -156,7 +152,12 @@ export default function Chat() {
           </div>
 
           {friendList && friendList.status === "success" && friendList.data && (
-            <Users user={friendList.data} />
+            <Users
+              friendList={friendList.data}
+              user={user}
+              changConversation={handleSetIdRoom}
+              currentRoom={roomId}
+            />
           )}
         </div>
         <div className="col-12 col-md-8 h-100vh">
@@ -167,11 +168,16 @@ export default function Chat() {
               </h3>
             </div>
             <div className="flex-grow-1 flex-shrink-1 h-100 overflow-hidden bg-main rounded-3 mb-2">
-              {fromServer && (
+              {fromServer && roomId ? (
                 <Messages data={fromServer} user={user} ref={endRef} />
+              ) : (
+                <div className="text-center">
+                  <h2 className="text-capitalize text-white pt-5">
+                    Well come to free chat app
+                  </h2>
+                </div>
               )}
             </div>
-
             <div className="bg-gray-1 rounded-5 mb-1">
               <form action="" onSubmit={handleSubmitMessage}>
                 <div className="bg-main rounded-5  p-2 d-flex justify-content-between align-items-center">
