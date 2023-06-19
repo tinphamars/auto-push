@@ -9,6 +9,7 @@ import Users from "../component/users";
 import Messages from "../component/messages";
 import { getConversation, getFriendList } from "../api/login";
 import { useRouter } from "next/navigation";
+import useSocket from "../customHook/connectSocket";
 
 interface Message {
   userId: string;
@@ -20,53 +21,68 @@ interface Message {
 interface MessageShow {
   userId: number;
   value: string;
+  roomId: string;
+}
+
+interface Notify {
+  id: string;
+  count: number | 0;
 }
 
 export default function Chat() {
   const route = useRouter();
-  const [socket, setSocket] = useState<any>(null);
+  const socket = useSocket("http://localhost:7171");
   const [message, setMessage] = useState<Message>({
     userId: "",
     value: "",
     roomId: "",
   });
   const [user, setUser] = useState<any>(null);
+  const [notify, setNotify] = useState<Notify[]>([]);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [newMes, setNewMes] = useState<MessageShow | null>(null);
   const [fromServer, setFromServer] = useState<MessageShow[]>([]);
 
-  const setupSocket = () => {
-    const newSocket: any = io("http://localhost:7171", {
-      withCredentials: true,
-      autoConnect: true,
-    });
-
-    newSocket.on("connect", () => {
-      setSocket(newSocket);
-    });
-  };
-
   useEffect(() => {
-    setupSocket();
     const getUser = localStorage.getItem("user") || null;
-
     if (getUser) {
       setUser(JSON.parse(getUser));
     } else {
       route.push("/");
     }
 
-    socket &&
-      socket.on("message", (data: MessageShow) => {
-        setFromServer((old) => [...old, data]);
-        setNewMes(data);
-        console.log("client data",data);
-      });
+    socket && socket.off("messageFromSever");
 
-    return () => {
-      socket && socket.disconnect();
-    };
-  }, []);
+    socket &&
+      socket.on("messageFromSever", (data: MessageShow) => {
+        // console.log("Room Id", data.roomId, socket.currentId);
+        if (data.roomId === socket.currentId) {
+          console.log("__one two");
+          setFromServer((old) => [...old, data]);
+        } else {
+          console.log("__different room id");
+          const nextNotifyList = [...notify];
+          if (nextNotifyList.length > 0) {
+            const artwork = nextNotifyList.find((a) => {
+              if (a.id === data.roomId) {
+                return (a.count = a.count + 1);
+              } else {
+                return a;
+              }
+            });
+            
+            setNotify(artwork);
+          } else {
+            setNotify((old) => [...old, { id: data.roomId, count: 1 }]);
+          }
+        }
+        setNewMes(data);
+      });
+  }, [socket, roomId, notify]);
+
+  useEffect(() => {
+    console.log(notify);
+  }, [notify]);
 
   const handleFocusInputChat = () => {
     socket && socket.emit("typing", "typing");
@@ -83,6 +99,7 @@ export default function Chat() {
 
   const handleSubmitMessage = (e: any) => {
     e.preventDefault();
+    console.log("handle submit form", message);
     if (message.value) {
       socket.emit("message", message);
       setMessage({ ...message, value: "" });
@@ -98,6 +115,8 @@ export default function Chat() {
   // HANDLE set id room
   const handleSetIdRoom = (id: string) => {
     setRoomId(id);
+    socket.currentId = id;
+    setFromServer([]);
   };
 
   // Scroll to end of list message
@@ -115,6 +134,10 @@ export default function Chat() {
     }
   }, [newMes, user]);
   // End scroll to end of list message
+
+  useEffect(() => {
+    console.log("Current roomm ID: ", roomId);
+  }, [roomId]);
 
   return (
     <main className="container-sm">
@@ -157,6 +180,7 @@ export default function Chat() {
               user={user}
               changConversation={handleSetIdRoom}
               currentRoom={roomId}
+              notify={notify}
             />
           )}
         </div>
