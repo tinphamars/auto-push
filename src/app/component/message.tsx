@@ -1,15 +1,14 @@
 import Image from "next/image";
 
 function Message({ mes, user }: any) {
-  console.log(mes.userId);
   return (
     <>
-      {mes.userId === user._id ? (
+      {mes.user_id === user._id ? (
         <div className="d-flex flex-row-reverse mb-1">
           <div className="friend-avatar"></div>
           <div className="text-white flex-grow-1">
             <div className="text-end">
-              <div className="message-text right">{mes.value}</div>
+              <div className="message-text right">{mes.content}</div>
             </div>
           </div>
         </div>
@@ -25,7 +24,7 @@ function Message({ mes, user }: any) {
           </div>
           <div className="text-white flex-grow-1">
             <div className="">
-              <span className="message-text left">{mes.value}</span>
+              <span className="message-text left">{mes.content}</span>
             </div>
           </div>
         </div>

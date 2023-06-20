@@ -1,13 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import io from "socket.io-client";
-import { useEffect, useRef, useState } from "react";
 import { useQuery } from "react-query";
+import { useEffect, useRef, useState } from "react";
 
 import Users from "../component/users";
 import Messages from "../component/messages";
-import { getConversation, getFriendList } from "../api/login";
+import { getConversation, getMessageForRoom } from "../api/login";
 import { useRouter } from "next/navigation";
 import useSocket from "../customHook/connectSocket";
 
@@ -19,9 +18,14 @@ interface Message {
 
 // Message type
 interface MessageShow {
-  userId: number;
-  value: string;
-  roomId: string;
+  content: string;
+  conversation_id: string;
+  createdAt: string;
+  is_remove: number;
+  updatedAt: string;
+  user_id: string;
+  __v: number;
+  _id: string;
 }
 
 interface Notify {
@@ -55,34 +59,35 @@ export default function Chat() {
 
     socket &&
       socket.on("messageFromSever", (data: MessageShow) => {
-        // console.log("Room Id", data.roomId, socket.currentId);
-        if (data.roomId === socket.currentId) {
-          console.log("__one two");
+        console.log("data : ", data);
+        if (data.conversation_id === roomId) {
+          console.log("asdfasldfasdfsdfa_________");
           setFromServer((old) => [...old, data]);
         } else {
-          console.log("__different room id");
           const nextNotifyList = [...notify];
-          if (nextNotifyList.length > 0) {
-            const artwork = nextNotifyList.find((a) => {
-              if (a.id === data.roomId) {
-                return (a.count = a.count + 1);
-              } else {
-                return a;
+          const existingNotifyItem = nextNotifyList.find(
+            (a) => a.id === data.conversation_id
+          );
+
+          if (existingNotifyItem) {
+            const updatedNotifyList = nextNotifyList.map((a) => {
+              if (a.id === data.conversation_id) {
+                a.count = a.count + 1;
               }
+              return a;
             });
-            
-            setNotify(artwork);
+
+            setNotify(updatedNotifyList);
           } else {
-            setNotify((old) => [...old, { id: data.roomId, count: 1 }]);
+            setNotify((old) => [
+              ...old,
+              { id: data.conversation_id, count: 1 },
+            ]);
           }
         }
         setNewMes(data);
       });
-  }, [socket, roomId, notify]);
-
-  useEffect(() => {
-    console.log(notify);
-  }, [notify]);
+  }, [socket, roomId, notify, route]);
 
   const handleFocusInputChat = () => {
     socket && socket.emit("typing", "typing");
@@ -99,7 +104,6 @@ export default function Chat() {
 
   const handleSubmitMessage = (e: any) => {
     e.preventDefault();
-    console.log("handle submit form", message);
     if (message.value) {
       socket.emit("message", message);
       setMessage({ ...message, value: "" });
@@ -115,28 +119,37 @@ export default function Chat() {
   // HANDLE set id room
   const handleSetIdRoom = (id: string) => {
     setRoomId(id);
-    socket.currentId = id;
-    setFromServer([]);
+    setNotify(notify.filter((a) => a.id !== id));
   };
 
   // Scroll to end of list message
   const endRef = useRef<HTMLElement>(null);
   const handelScroll = () => {
     if (endRef.current) {
-      // endRef.current.scrollIntoView({ behavior: "smooth" });
       endRef.current.scrollTop = endRef.current.scrollHeight;
     }
   };
 
   useEffect(() => {
-    if (newMes && newMes.userId === user._id) {
+    if (newMes && newMes.user_id === user._id) {
       handelScroll();
     }
   }, [newMes, user]);
   // End scroll to end of list message
 
+  // const messageWithRoom = useQuery({
+  //   queryKey: ["message", roomId],
+  //   queryFn: () => getMessageForRoom(roomId),
+  // });
+
   useEffect(() => {
-    console.log("Current roomm ID: ", roomId);
+    roomId &&
+      getMessageForRoom(roomId).then((data) => {
+        setFromServer(data);
+        setTimeout(() => {
+          handelScroll();
+        }, 300);
+      });
   }, [roomId]);
 
   return (
@@ -202,35 +215,37 @@ export default function Chat() {
                 </div>
               )}
             </div>
-            <div className="bg-gray-1 rounded-5 mb-1">
-              <form action="" onSubmit={handleSubmitMessage}>
-                <div className="bg-main rounded-5  p-2 d-flex justify-content-between align-items-center">
-                  <button className="btn">
-                    <Image
-                      src="/image/file.png"
-                      alt="friend name"
-                      width={23}
-                      height={23}
+            {roomId && (
+              <div className="bg-gray-1 rounded-5 mb-1">
+                <form action="" onSubmit={handleSubmitMessage}>
+                  <div className="bg-main rounded-5  p-2 d-flex justify-content-between align-items-center">
+                    <button className="btn">
+                      <Image
+                        src="/image/file.png"
+                        alt="friend name"
+                        width={23}
+                        height={23}
+                      />
+                    </button>
+                    <input
+                      type="text"
+                      className="w-100 message-input"
+                      onFocus={handleFocusInputChat}
+                      onChange={handleChangeInputChat}
+                      value={message.value}
                     />
-                  </button>
-                  <input
-                    type="text"
-                    className="w-100 message-input"
-                    onFocus={handleFocusInputChat}
-                    onChange={handleChangeInputChat}
-                    value={message.value}
-                  />
-                  <button type="submit" className="btn">
-                    <Image
-                      src="/image/send.png"
-                      alt="friend name"
-                      width={23}
-                      height={23}
-                    />
-                  </button>
-                </div>
-              </form>
-            </div>
+                    <button type="submit" className="btn">
+                      <Image
+                        src="/image/send.png"
+                        alt="friend name"
+                        width={23}
+                        height={23}
+                      />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -23,6 +23,10 @@ body {
   color: #B3B9C9
 }
 
+.text-yellow {
+  color: #f0d90c
+}
+
 .size-12 {
   font-size: 12px;
 }
@@ -103,22 +107,39 @@ body {
 }
 
 .btn-in-input {
-  border: none; 
-  background :white;
+  border: none;
+  background: white;
   padding: 7px;
   line-height: 0;
   position: absolute;
-  top : 4px;
+  top: 4px;
   right: 4px;
 }
 
 .friend-list .list-group-item:hover {
   background: #7A8194;
-} 
+}
 
 .friend-list .list-group-item {
   cursor: pointer;
-} 
+}
+
+.count-notify {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  line-height: 0;
+  height: 23px;
+  width: 23px;
+  background-color: red;
+  font-weight: 500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  color: white;
+}
 
 @media only screen and (max-width: 767px) {
   .user-list {
