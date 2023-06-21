@@ -33,6 +33,8 @@ interface Notify {
   count: number | 0;
 }
 
+let lastScroll: number = 0;
+
 export default function Chat() {
   const route = useRouter();
   const socket = useSocket("http://localhost:7171");
@@ -46,6 +48,7 @@ export default function Chat() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [newMes, setNewMes] = useState<MessageShow | null>(null);
   const [fromServer, setFromServer] = useState<MessageShow[]>([]);
+  const [heightScroll, setHeightScroll] = useState<number>(0);
 
   useEffect(() => {
     const getUser = localStorage.getItem("user") || null;
@@ -61,7 +64,6 @@ export default function Chat() {
       socket.on("messageFromSever", (data: MessageShow) => {
         console.log("data : ", data);
         if (data.conversation_id === roomId) {
-          console.log("asdfasldfasdfsdfa_________");
           setFromServer((old) => [...old, data]);
         } else {
           const nextNotifyList = [...notify];
@@ -135,13 +137,8 @@ export default function Chat() {
       handelScroll();
     }
   }, [newMes, user]);
-  // End scroll to end of list message
 
-  // const messageWithRoom = useQuery({
-  //   queryKey: ["message", roomId],
-  //   queryFn: () => getMessageForRoom(roomId),
-  // });
-
+  // GET message from server
   useEffect(() => {
     roomId &&
       getMessageForRoom(roomId).then((data) => {
@@ -151,6 +148,46 @@ export default function Chat() {
         }, 300);
       });
   }, [roomId]);
+
+  // HANDEL SCROLL : scroll to the top call api again
+  const currentScrollRef = useRef<number>(0);
+  const handleScroll = (top: number) => {
+    const check: Boolean = checkScrollUp(top);
+
+    if (check && top === 0) {
+      console.log("scroll to end", endRef.current?.scrollTop);
+      getMessageForRoom("648d3a23eb33149a6fb66dac").then((data) => {
+        setFromServer((old) => [...data, ...old]);
+
+        setTimeout(() => {
+          if (endRef.current) {
+            endRef.current.scrollTop = currentScrollRef.current;
+              
+            console.log(currentScrollRef.current, "prev")
+            const {
+              scrollHeight,
+            }: {
+              scrollHeight: number;
+            } = endRef.current;
+
+            currentScrollRef.current = scrollHeight;
+
+            console.log(currentScrollRef.current, "next")
+          }
+        }, 1000);
+      });
+    }
+  };
+
+  const checkScrollUp = (scrollNumber: number): boolean => {
+    if (scrollNumber > 0 && lastScroll <= scrollNumber) {
+      lastScroll = scrollNumber;
+      return false;
+    } else {
+      lastScroll = scrollNumber;
+      return true;
+    }
+  };
 
   return (
     <main className="container-sm">
@@ -206,7 +243,12 @@ export default function Chat() {
             </div>
             <div className="flex-grow-1 flex-shrink-1 h-100 overflow-hidden bg-main rounded-3 mb-2">
               {fromServer && roomId ? (
-                <Messages data={fromServer} user={user} ref={endRef} />
+                <Messages
+                  data={fromServer}
+                  user={user}
+                  ref={endRef}
+                  handleScroll={handleScroll}
+                />
               ) : (
                 <div className="text-center">
                   <h2 className="text-capitalize text-white pt-5">
