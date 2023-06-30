@@ -100,8 +100,6 @@ body {
   overflow-y: auto;
   max-height: 100%;
   padding: .75rem;
-  scroll-behavior: smooth;
-  animation: scrollAnimation 1s forwards;
 }
 
 .h-100vh {

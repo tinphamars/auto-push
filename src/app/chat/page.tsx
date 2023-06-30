@@ -1,5 +1,5 @@
 "use client";
-
+       
 import Image from "next/image";
 import { useQuery } from "react-query";
 import { useEffect, useRef, useState } from "react";
@@ -33,6 +33,10 @@ interface Notify {
   count: number | 0;
 }
 
+interface HeightScroll {  
+  prev: number;
+  next: number;
+}
 let lastScroll: number = 0;
 
 export default function Chat() {
@@ -48,7 +52,10 @@ export default function Chat() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [newMes, setNewMes] = useState<MessageShow | null>(null);
   const [fromServer, setFromServer] = useState<MessageShow[]>([]);
-  const [heightScroll, setHeightScroll] = useState<number>(0);
+  const [heightScroll, setHeightScroll] = useState<HeightScroll>({
+    prev: 0,
+    next: 0,
+  });
 
   useEffect(() => {
     const getUser = localStorage.getItem("user") || null;
@@ -62,7 +69,6 @@ export default function Chat() {
 
     socket &&
       socket.on("messageFromSever", (data: MessageShow) => {
-        console.log("data : ", data);
         if (data.conversation_id === roomId) {
           setFromServer((old) => [...old, data]);
         } else {
@@ -131,7 +137,6 @@ export default function Chat() {
       endRef.current.scrollTop = endRef.current.scrollHeight;
     }
   };
-
   useEffect(() => {
     if (newMes && newMes.user_id === user._id) {
       handelScroll();
@@ -156,28 +161,42 @@ export default function Chat() {
 
     if (check && top === 0) {
       console.log("scroll to end", endRef.current?.scrollTop);
+
+      if (endRef.current) {
+        const {
+          scrollHeight,
+        }: {
+          scrollHeight: number;
+        } = endRef.current;
+        setHeightScroll((old) => ({ prev: old.next, next: scrollHeight }));
+      }
+
       getMessageForRoom("648d3a23eb33149a6fb66dac").then((data) => {
-        setFromServer((old) => [...data, ...old]);
-
-        setTimeout(() => {
-          if (endRef.current) {
-            endRef.current.scrollTop = currentScrollRef.current;
-              
-            console.log(currentScrollRef.current, "prev")
-            const {
-              scrollHeight,
-            }: {
-              scrollHeight: number;
-            } = endRef.current;
-
-            currentScrollRef.current = scrollHeight;
-
-            console.log(currentScrollRef.current, "next")
-          }
-        }, 1000);
+        if (data) {
+          setFromServer((old) => [...data, ...old]);
+          setTimeout(() => {
+            if (endRef.current) {
+              const {
+                scrollHeight,
+              }: {
+                scrollHeight: number;
+              } = endRef.current;
+              setHeightScroll((old) => ({
+                prev: old.next,
+                next: scrollHeight,
+              }));
+            }
+          }, 100);
+        }
       });
     }
   };
+
+  useEffect(() => {
+    if (endRef.current) {
+      endRef.current.scrollTop = heightScroll.next - heightScroll.prev;
+    }
+  }, [heightScroll]);
 
   const checkScrollUp = (scrollNumber: number): boolean => {
     if (scrollNumber > 0 && lastScroll <= scrollNumber) {
